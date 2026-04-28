@@ -12,6 +12,7 @@ from src.bot.config import Config, load_config
 from src.bot.handlers import base_router
 from src.bot.health import health_handler
 from src.bot.logging_config import configure_logging
+from src.bot.middlewares import AuthMiddleware
 
 log = structlog.get_logger()
 
@@ -88,6 +89,7 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     dp = Dispatcher()
+    dp.update.outer_middleware(AuthMiddleware(config.allowed_user_ids))
     dp.include_router(base_router)
 
     await _retry_get_me(bot)
