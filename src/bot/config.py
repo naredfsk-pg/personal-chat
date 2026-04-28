@@ -13,6 +13,8 @@ class Config:
     webhook_url: str | None
     webhook_port: int
     allowed_user_ids: frozenset[int]
+    gemini_api_key: str
+    gemini_model: str
 
 
 def load_config() -> Config:
@@ -21,6 +23,10 @@ def load_config() -> Config:
     token = os.getenv("BOT_TOKEN")
     if not token:
         raise RuntimeError("BOT_TOKEN is required")
+
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_api_key:
+        raise RuntimeError("GEMINI_API_KEY is required")
 
     raw_ids = os.getenv("ALLOWED_USER_IDS", "")
     allowed = frozenset(int(uid.strip()) for uid in raw_ids.split(",") if uid.strip())
@@ -33,4 +39,6 @@ def load_config() -> Config:
         webhook_url=os.getenv("WEBHOOK_URL") or None,
         webhook_port=int(os.getenv("WEBHOOK_PORT", "8080")),
         allowed_user_ids=allowed,
+        gemini_api_key=gemini_api_key,
+        gemini_model=os.getenv("GEMINI_MODEL", "gemini-1.5-flash"),
     )

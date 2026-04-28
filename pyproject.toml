@@ -11,6 +11,8 @@ dependencies = [
     "python-dotenv",
     "aiohttp",
     "structlog",
+    "google-generativeai>=0.8",
+    "tenacity>=8.0",
 ]
 
 [project.optional-dependencies]
