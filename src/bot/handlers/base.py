@@ -2,6 +2,8 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
+from src.core.memory.conversation_buffer import ConversationBuffer
+
 router = Router()
 
 
@@ -25,3 +27,13 @@ async def help_handler(message: Message) -> None:
         "/summary — สรุปสัปดาห์ที่ผ่านมา\n"
         "/quota — ดู Gemini quota วันนี้",
     )
+
+
+@router.message(Command("clear"))
+async def clear_handler(
+    message: Message,
+    user_id: int,
+    conversation_buffer: ConversationBuffer,
+) -> None:
+    conversation_buffer.clear(user_id)
+    await message.reply("ล้างประวัติสนทนาแล้ว")

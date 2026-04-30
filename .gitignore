@@ -3,6 +3,8 @@
 
 *.env
 
+.claude
+
 */models
 database/
 data-store/

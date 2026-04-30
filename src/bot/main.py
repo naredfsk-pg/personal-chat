@@ -13,6 +13,7 @@ from src.bot.handlers import base_router, chat_router
 from src.bot.health import health_handler
 from src.bot.logging_config import configure_logging
 from src.bot.middlewares import AuthMiddleware
+from src.core.memory.conversation_buffer import ConversationBuffer
 from src.infrastructure.gemini.client import GeminiClient
 
 log = structlog.get_logger()
@@ -90,10 +91,12 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     gemini = GeminiClient(api_key=config.gemini_api_key, model_name=config.gemini_model)
+    buffer = ConversationBuffer(max_turns=10, idle_timeout_seconds=1800)
 
     dp = Dispatcher()
     dp.update.outer_middleware(AuthMiddleware(config.allowed_user_ids))
     dp["gemini"] = gemini
+    dp["conversation_buffer"] = buffer
     dp.include_router(base_router)   # command handlers — must come before generic handler
     dp.include_router(chat_router)
 

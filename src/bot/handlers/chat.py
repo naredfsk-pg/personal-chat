@@ -4,6 +4,7 @@ from aiogram import Router
 from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter
 from aiogram.types import Message
 
+from src.core.memory.conversation_buffer import ConversationBuffer
 from src.infrastructure.gemini.client import GeminiClient
 from src.infrastructure.gemini.client import Message as GeminiMessage
 
@@ -46,7 +47,12 @@ async def _safe_edit(msg: Message, text: str) -> None:
 
 
 @router.message()
-async def chat_handler(message: Message, gemini: GeminiClient, user_id: int) -> None:
+async def chat_handler(
+    message: Message,
+    gemini: GeminiClient,
+    user_id: int,
+    conversation_buffer: ConversationBuffer,
+) -> None:
     # Non-text updates (sticker, photo without caption, etc.) → ignore silently
     if not message.text:
         return
@@ -60,13 +66,16 @@ async def chat_handler(message: Message, gemini: GeminiClient, user_id: int) -> 
         await message.reply("กรุณาส่งข้อความ")
         return
 
+    conversation_buffer.add_turn(user_id, role="user", content=message.text)
+
+    turns = conversation_buffer.get_turns(user_id)
+    gemini_messages = [GeminiMessage(role=t.role, content=t.content) for t in turns]
+
     reply = await message.reply("...")
     accumulated = ""
     last_edit_len = 0
 
-    async for chunk in gemini.stream_chat(
-        [GeminiMessage(role="user", content=message.text)]
-    ):
+    async for chunk in gemini.stream_chat(gemini_messages):
         accumulated += chunk
         new_chars = len(accumulated) - last_edit_len
         # Edit progressively, but stop mid-stream edits when approaching the limit
@@ -77,6 +86,9 @@ async def chat_handler(message: Message, gemini: GeminiClient, user_id: int) -> 
     if not accumulated:
         await _safe_edit(reply, "ไม่มีคำตอบ กรุณาลองใหม่")
         return
+
+    # Only record model turn when there is an actual response to store
+    conversation_buffer.add_turn(user_id, role="model", content=accumulated)
 
     if len(accumulated) <= _MAX_TG_LEN:
         # Final edit to flush any remaining characters below the edit threshold
